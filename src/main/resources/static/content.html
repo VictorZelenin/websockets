@@ -1,0 +1,177 @@
+<html lang="">
+<head>
+    <title>WebSockets Demo App</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet"
+          id="bootstrap-css">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+            integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+</head>
+<body>
+<section id="tabs" class="project-tab">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <nav>
+                    <div class="nav nav-tabs nav-fill" id="nav-tab" role="tablist">
+                        <a class="nav-item nav-link active" id="nav-table-tab" data-toggle="tab" href="#nav-home"
+                           role="tab" aria-controls="nav-home" aria-selected="true">Tractors Sensors</a>
+                        <a class="nav-item nav-link" id="nav-profile-tab" data-toggle="tab" href="#nav-profile"
+                           role="tab" aria-controls="nav-profile" aria-selected="false">Charts</a>
+                    </div>
+                </nav>
+                <div class="tab-content" id="nav-tabContent">
+                    <div class="tab-pane fade show active" id="nav-home" role="tabpanel"
+                         aria-labelledby="nav-table-tab">
+                        <table class="table" id="sensors-tbl">
+                            <tr>
+                                <th>Tractor's id</th>
+                                <th>Timestamp</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Speed (m/s)</th>
+                                <th>Fuel Consumption (km/l)</th>
+                                <th>Status</th>
+                                <th>Processed Seeds (total amount)</th>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
+                        <div class="row">
+                            <div class="col-md-6" id="chart">
+                                <canvas id="pie-chart" width="400" height="400"></canvas>
+                            </div>
+                            <div class="col-md-6" id="barchart">
+                                <canvas id="bar-chart" width="400" height="400"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="openSocket()">Open socket connection</button>
+                <button onclick="closeSocket()">Close socket connection</button>
+            </div>
+        </div>
+    </div>
+</section>
+<script src="controls/table-tab-controls.js"></script>
+<script src="controls/map-tab-controls.js"></script>
+<script src="controls/chart-controls.js"></script>
+<script src="utils.js"></script>
+</body>
+<script>
+    let chart = new Chart(document.getElementById("pie-chart"), {
+        type: 'pie',
+        data: {
+            labels: [],
+            datasets: [{}]
+        },
+        options: {
+            title: {
+                display: true,
+                text: 'Tractors fuel consumption'
+            }
+        }
+    });
+
+    barChart = new Chart(document.getElementById("bar-chart"), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{label: 'Count of processed seeds.'}]
+        },
+        options: {
+            title: {
+                display: true,
+                text: 'Processed seeds by tractors.'
+            }
+        }
+    })
+</script>
+<script>
+    const url = "ws://localhost:8080/sensors";
+
+    let colors = [];
+    const socketOnMessage = event => {
+        let sensorData = JSON.parse(event.data);
+
+        if (colors.length === 0) {
+            for (let i in sensorData) {
+                colors.push(randColor());
+            }
+        }
+
+        insertRowsToTable(sensorData);
+
+        drawPieChart(sensorData);
+        drawBarChart(sensorData);
+    };
+
+    openSocket();
+
+    function drawPieChart(sensorData) {
+        let labels = [];
+        let dataPoints = [];
+
+        for (let i = 0; i < sensorData.length; i++) {
+            let sensorInfo = sensorData[i];
+            let label = 'Tractor' + sensorInfo['tractorId'];
+
+            labels.push(label);
+            dataPoints.push(sensorInfo['fuelConsumption']);
+
+            chart.data.labels = labels;
+            chart.data.datasets[0] = {
+                labels: labels,
+                data: dataPoints,
+                backgroundColor: colors
+            };
+            chart.update();
+        }
+    }
+
+    function drawBarChart(sensorData) {
+        let labels = [];
+        let dataPoints = [];
+
+        for (let i = 0; i < sensorData.length; i++) {
+            let sensorInfo = sensorData[i];
+
+            let label = 'Tractor' + sensorInfo['tractorId'];
+            labels.push(label);
+
+            let prevDataPoint = 0;
+            if (typeof barChart.data.datasets[0].data[i] !== 'undefined') {
+                prevDataPoint = Number.parseInt(barChart.data.datasets[0].data[i]);
+            }
+
+            dataPoints.push(sensorInfo['countOfProcessedSeeds'] + prevDataPoint);
+        }
+
+        console.log("accumulated data >> " + dataPoints);
+        barChart.data.labels = labels;
+        barChart.data.datasets[0] = {
+            label: "Count of seeds",
+            data: dataPoints,
+            backgroundColor: colors
+        };
+        barChart.update();
+    }
+
+    function closeSocket() {
+        socket.close();
+    }
+
+    function openSocket() {
+        socket = new WebSocket(url);
+        socket.addEventListener('message', socketOnMessage)
+    }
+</script>
+</html>
