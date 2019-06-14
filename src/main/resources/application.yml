@@ -1,3 +1,4 @@
 application:
   data-generation:
     time-freq: 2 # seconds
+  number-of-tractors: 5
