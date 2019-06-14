@@ -1,9 +1,11 @@
 package org.syngenta.trainings.websockets.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -17,12 +19,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class SensorDataSocketHandler extends TextWebSocketHandler {
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private TractorSensorDataGenerator dataGenerator;
+    private final ObjectMapper objectMapper;
+    private final TractorSensorDataGenerator dataGenerator;
 
     @Value("${application.data-generation.time-freq}")
     private int timeFrequency;

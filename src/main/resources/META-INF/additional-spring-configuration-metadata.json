@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "application.data-generation.time-freq",
+      "type": "java.lang.String",
+      "description": "Description for application.data-generation.time-freq."
+  }
+] }
